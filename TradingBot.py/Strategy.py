@@ -14,7 +14,7 @@ Rule:
 
 import pandas as pd
 from config import SHORT_WINDOW, LONG_WINDOW
-from logging_setup import decision_logger
+from logs import decision_logger
 
 
 def generate_signals(df: pd.DataFrame, ticker: str = "") -> pd.DataFrame:

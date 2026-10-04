@@ -1,8 +1,9 @@
 """
 backtesting.py - long-only backtester for the MA-crossover strategy.
 
-Runs today with NO database and NO other project files (it falls back to
-stand-ins). Every spot you must fill in later is marked:
+Reads real price data saved by data.py (run `python data.py` first).
+Temporary stand-ins cover config.py and logging_setup.py until you create
+them. Every spot you must fill in later is marked:
 
     >>> INSERT LATER <<<
 
@@ -38,18 +39,12 @@ except ImportError:
     config.LONG_WINDOW = 50
     sys.modules["config"] = config
 
-try:
-    import logging_setup  # noqa: F401
-except ImportError:
-    import logging
-    logging_setup = types.ModuleType("logging_setup")
-    logging_setup.decision_logger = logging.getLogger("decisions")
-    sys.modules["logging_setup"] = logging_setup
+
 # ==================== end of temporary stand-ins ==================
 
 # >>> INSERT LATER <<< If your strategy file isn't named strategy.py,
 # change the module name on this line.
-from strategy import generate_signals
+from Strategy import generate_signals
 
 TRADING_DAYS = 252
 
@@ -60,37 +55,13 @@ TICKERS = ["KO", "NVDA", "JNJ", "MSFT", "RIVN"]
 # ==================================================================
 # DATA LOADING
 # ==================================================================
-def load_price_data(ticker: str) -> pd.DataFrame:
-    """
-    Must return a DataFrame that is:
-      * indexed by date (DatetimeIndex), sorted ascending
-      * has a 'close' column (required) and an 'open' column (recommended)
-
-    >>> INSERT LATER <<<  your real historical database.
-    Replace the body of this function with a query against your data
-    source (e.g. the SEC EDGAR + Tiingo pipeline in data.py, a SQLite/
-    Postgres query, or pd.read_csv(f"data/{ticker}.csv")).
-
-    POINT-IN-TIME REMINDER: only return data that was actually known on
-    each date. Prices should be split/dividend adjusted consistently, and
-    any fundamentals must be keyed to the FILING date, not the fiscal
-    period end date, or the backtest will peek into the future.
-
-    Example of what the replacement might look like:
-        # from data import get_prices            # <-- your future data.py
-        # return get_prices(ticker, start="2018-01-01")
-    """
-    # ---- TEMPORARY: synthetic random-walk data so the file runs today ----
-    # DELETE everything below once real data is wired in.
-    seed = abs(hash(ticker)) % (2**32)
-    rng = np.random.default_rng(seed)
-    idx = pd.date_range("2020-01-01", periods=750, freq="B")
-    close = 100 + np.cumsum(rng.normal(0.05, 1, size=750))
-    open_ = close + rng.normal(0, 0.3, size=750)
-    return pd.DataFrame({"open": open_, "close": close}, index=idx)
-
-
-USING_SYNTHETIC_DATA = True  # >>> INSERT LATER <<< set to False once load_price_data uses real data
+# Real prices come from data.py (Tiingo, split/dividend-adjusted, saved to
+# data/prices/{TICKER}.csv). It returns a date-indexed DataFrame with
+# 'open' and 'close' columns, which is what generate_signals() expects.
+#
+# >>> INSERT LATER <<< If you move to a SQLite database, change data.py's
+# load_price_data() to query it - nothing in this file needs to change.
+from Data import load_price_data
 
 
 # ==================================================================
@@ -215,19 +186,20 @@ def print_report(ticker: str, metrics: dict, trades: pd.DataFrame):
 # MAIN
 # ==================================================================
 def main():
-    if USING_SYNTHETIC_DATA:
-        print("!" * 60)
-        print("WARNING: using SYNTHETIC random data - results are meaningless.")
-        print("Wire real data into load_price_data() first.")
-        print("!" * 60)
-
     summary = []
     for ticker in TICKERS:
-        prices = load_price_data(ticker)
+        try:
+            prices = load_price_data(ticker)
+        except FileNotFoundError:
+            print(f"\nNo saved price file for {ticker}. Run `python data.py` first.")
+            continue
         equity, trades = run_backtest(prices, ticker=ticker)
         metrics = compute_metrics(equity, trades)
         print_report(ticker, metrics, trades)
         summary.append({"ticker": ticker, **metrics})
+
+    if not summary:
+        return
 
     print("\n=== SUMMARY ===")
     cols = ["ticker", "total_return_pct", "buy_hold_return_pct",
