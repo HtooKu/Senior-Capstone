@@ -26,8 +26,8 @@ try:
     import config  # noqa: F401
 except ImportError:
     config = types.ModuleType("config")
-    config.SHORT_WINDOW = 20
-    config.LONG_WINDOW = 50
+    config.SHORT_WINDOW = 30
+    config.LONG_WINDOW = 60
     sys.modules["config"] = config
 
 
