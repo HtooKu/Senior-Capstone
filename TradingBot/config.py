@@ -6,5 +6,5 @@ Change numbers here, not inside the other files.
 """
 
 # Moving-average crossover windows (in trading days)
-SHORT_WINDOW = 30
-LONG_WINDOW = 60
+SHORT_WINDOW = 20
+LONG_WINDOW = 50
