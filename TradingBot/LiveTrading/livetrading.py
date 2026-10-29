@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 from alpaca.trading.client import TradingClient
 
+def ready_to_trade(client):
+    "Checking if the account is ready to trade"
 
 def get_trading_client():
     """Load keys from .env and return a paper-trading client."""
@@ -49,6 +51,8 @@ def main():
     client = get_trading_client()
     show_account(client)
     show_positions(client)
+
+    ok, reason = ready_to_trade(client)
 
 
 if __name__ == "__main__":
