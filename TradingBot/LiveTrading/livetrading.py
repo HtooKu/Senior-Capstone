@@ -6,6 +6,11 @@ from alpaca.trading.client import TradingClient
 
 def ready_to_trade(client):
     "Checking if the account is ready to trade"
+    clock = client.get_clock()
+    if clock.is_open:
+        return False
+
+
 
 def get_trading_client():
     """Load keys from .env and return a paper-trading client."""
