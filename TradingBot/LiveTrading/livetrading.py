@@ -1,14 +1,40 @@
 # livetrading.py
-# livetrading.py
 import os
 from dotenv import load_dotenv
 from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import GetCalendarRequest
+from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce  # noqa: F401
+
+
+def place_order(client, symbol, side, qty, ref_price, dry_run=True):
+    "Checking if the account is ready to trade"
+    clock = client.get_clock()
+    if clock.is_open:
+        return False, "Market is open. Wait until market closes to trade."
+    today = clock.timestamp.date()
+    calendar = client.get_calendar(GetCalendarRequest(start=today, end=today))
+    if not calendar:
+        return False, "No trading calendar for today. Market is closed."
+
+    if clock.next_open.date() <= today:
+       return False, "Market is closed, but next open is today. Wait until market opens to trade."
+    return True, "Market is closed. Ready to trade another day."
+
 
 def ready_to_trade(client):
     "Checking if the account is ready to trade"
     clock = client.get_clock()
     if clock.is_open:
-        return False
+        return False, "Market is open. Wait until market closes to trade."
+    today = clock.timestamp.date()
+    calendar = client.get_calendar(GetCalendarRequest(start=today, end=today))
+    if not calendar:
+        return False, "No trading calendar for today. Market is closed."
+
+    if clock.next_open.date() <= today:
+       return False, "Market is closed, but next open is today. Wait until market opens to trade."
+    return True, "Market is closed. Ready to trade another day."
 
 
 
@@ -58,7 +84,9 @@ def main():
     show_positions(client)
 
     ok, reason = ready_to_trade(client)
-
+    print(f"\nGate: {reason}")
+    if not ok:
+        return
 
 if __name__ == "__main__":
     main()
